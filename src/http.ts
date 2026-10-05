@@ -73,16 +73,22 @@ export class SkywardHttpClient {
       const cookieHeader = this.#jar.headerFor(current);
       if (cookieHeader) headers.set("Cookie", cookieHeader);
 
-      const response = await this.#fetch(current, {
+      const requestInit: RequestInit = {
         ...init,
         method,
-        body,
         headers,
         redirect: "manual",
         signal:
           init.signal ||
           AbortSignal.timeout(this.#timeoutMs),
-      });
+      };
+      if (body !== undefined) {
+        requestInit.body = body;
+      } else {
+        delete requestInit.body;
+      }
+
+      const response = await this.#fetch(current, requestInit);
 
       for (const value of setCookieValues(response.headers)) {
         this.#jar.absorbSetCookie(value, current);
