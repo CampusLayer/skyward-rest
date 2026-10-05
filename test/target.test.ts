@@ -132,3 +132,50 @@ test("imported browser cookies with leading dot domains are sent to Skyward", as
     "",
   );
 });
+
+
+test("session health reports authenticated and invalid SMS sessions without exposing page text", async () => {
+  const makeClient = (html: string) =>
+    createSkywardClient({
+      session: {
+        version: 1,
+        generation: "sms2",
+        baseUrl: "https://skyward.example.test/Student/web/",
+        role: "student",
+        sms2: {
+          dwd: "dwd",
+          wfaacl: "wfaacl",
+          encses: "encses",
+          sessionId: "session",
+        },
+      },
+      fetch: async () =>
+        new Response(html, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/html",
+          },
+        }),
+    });
+
+  const healthy = await makeClient(
+    '<html><body><div id="sf_ContentWrap"></div><form id="sf_navForm"><input name="sessionid"><input name="encses"></form></body></html>',
+  ).checkSession();
+
+  assert.deepEqual(healthy, {
+    valid: true,
+    state: "authenticated_shell",
+    htmlBytes: 139,
+  });
+
+  const expired = await makeClient(
+    "<html><body>Your session has expired. Please sign in again.</body></html>",
+  ).checkSession();
+
+  assert.equal(expired.valid, false);
+  assert.equal(expired.state, "session_invalid");
+  assert.equal(
+    JSON.stringify(expired).includes("Your session has expired"),
+    false,
+  );
+});
