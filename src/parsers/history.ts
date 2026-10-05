@@ -60,26 +60,22 @@ function parseLitRow(row: GridRow): string[] {
 
 function parseCourse(row: GridRow, lits: string[]): AcademicHistoryCourse {
   const cells = row.c || [];
+  const scores: AcademicHistoryCourse["scores"] = [];
+
+  cells.slice(2).forEach((cell, index) => {
+    const value = text(cell.h);
+    if (!value) return;
+
+    const numeric = Number(value);
+    scores.push({
+      lit: lits[index] || "",
+      grade: Number.isFinite(numeric) ? numeric : value,
+    });
+  });
+
   return {
     course: text(cells[0]?.h),
-    scores: cells
-      .slice(2)
-      .map((cell, index) => {
-        const value = text(cell.h);
-        if (!value) return null;
-
-        const numeric = Number(value);
-        return {
-          lit: lits[index] || "",
-          grade: Number.isFinite(numeric) ? numeric : value,
-        };
-      })
-      .filter(
-        (
-          value,
-        ): value is AcademicHistoryCourse["scores"][number] =>
-          Boolean(value),
-      ),
+    scores,
   };
 }
 
