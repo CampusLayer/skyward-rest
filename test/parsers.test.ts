@@ -250,3 +250,24 @@ test("page diagnostics expose structure without page text or record values", asy
     /did not contain the expected data grids/,
   );
 });
+
+
+test("page diagnostics classify session failures without returning page text", async () => {
+  const { summarizeSkywardPage } = await import(
+    "../src/parsers/page-diagnostic.js"
+  );
+
+  const expired = summarizeSkywardPage(
+    "<html><body>Your session has expired. Please sign in again.</body></html>",
+  );
+  assert.equal(expired.pageState, "session_invalid");
+  assert.doesNotMatch(
+    JSON.stringify(expired),
+    /Your session has expired/,
+  );
+
+  const denied = summarizeSkywardPage(
+    "<html><body>Access denied. You are not authorized.</body></html>",
+  );
+  assert.equal(denied.pageState, "access_denied");
+});
