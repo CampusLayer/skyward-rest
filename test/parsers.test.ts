@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   parseAcademicHistory,
+  parseAttendanceTables,
+  parseFeeTables,
   parseGradebook,
+  parseGraduationRequirementTables,
   parseReportCard,
+  parseScheduleTables,
   parseSkywardGridObjects,
+  parseTestScoreTables,
 } from "../src/index.js";
 
 test("parses grid objects without executing returned JavaScript", () => {
@@ -140,5 +145,70 @@ test("parses a basic gradebook page", () => {
   assert.equal(
     result.gradebook[0]?.assignments[0]?.title,
     "Atomic Structure Test",
+  );
+});
+
+
+test("parses discovered attendance tables without exposing record ids in table names", () => {
+  const html = `
+    <table id="grid_attendanceHistory123_456">
+      <thead><tr><th>Date</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>10/01/2026</td><td>Present</td></tr>
+        <tr><td>10/02/2026</td><td>Absent</td></tr>
+      </tbody>
+    </table>
+  `;
+
+  assert.deepEqual(parseAttendanceTables(html), [
+    {
+      id: "grid_attendanceHistory<n>_<n>",
+      headers: ["Date", "Status"],
+      rows: [
+        ["10/01/2026", "Present"],
+        ["10/02/2026", "Absent"],
+      ],
+    },
+  ]);
+});
+
+test("parses the discovered schedule, test score, fee, and graduation grids", () => {
+  const html = `
+    <table id="grid_todaysCurrentSchedule">
+      <thead><tr><th>Period</th><th>Course</th></tr></thead>
+      <tbody><tr><td>1</td><td>Geometry</td></tr></tbody>
+    </table>
+    <table id="grid_testscoresGrid77">
+      <thead><tr><th>Test</th><th>Score</th></tr></thead>
+      <tbody><tr><td>Assessment</td><td>Level 4</td></tr></tbody>
+    </table>
+    <table id="grid_currBalance">
+      <tbody><tr><td>Balance</td><td>$0.00</td></tr></tbody>
+    </table>
+    <table id="grid_feeManagement88">
+      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+      <tbody><tr><td>Lab</td><td>$5.00</td></tr></tbody>
+    </table>
+    <table id="grid_gradReqs_9">
+      <thead><tr><th>Requirement</th><th>Status</th></tr></thead>
+      <tbody><tr><td>Math</td><td>Complete</td></tr></tbody>
+    </table>
+  `;
+
+  assert.equal(
+    parseScheduleTables(html)[0]?.id,
+    "grid_todaysCurrentSchedule",
+  );
+  assert.equal(
+    parseTestScoreTables(html)[0]?.id,
+    "grid_testscoresGrid<n>",
+  );
+  assert.deepEqual(
+    parseFeeTables(html).map((table) => table.id),
+    ["grid_currBalance", "grid_feeManagement<n>"],
+  );
+  assert.equal(
+    parseGraduationRequirementTables(html)[0]?.id,
+    "grid_gradReqs_<n>",
   );
 });
