@@ -19,7 +19,7 @@ export class SkywardSession {
   readonly metadata: Readonly<Record<string, string>>;
 
   readonly #cookies: SkywardCookie[];
-  readonly #sms2?: Sms2SessionTokens;
+  readonly #sms2: Sms2SessionTokens | undefined;
 
   constructor(input: SkywardSessionExport) {
     if (input.version !== 1) {
