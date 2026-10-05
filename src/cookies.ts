@@ -15,8 +15,20 @@ export class CookieJar {
 
   set(cookie: SkywardCookie): void {
     if (!cookie.name) return;
-    const key = `${cookie.domain || ""}|${cookie.path || "/"}|${cookie.name}`;
-    this.#cookies.set(key, { ...cookie });
+
+    const normalizedDomain = cookie.domain
+      ? cookie.domain.replace(/^\./, "").toLowerCase()
+      : undefined;
+    const normalizedPath = cookie.path || "/";
+
+    const normalized: SkywardCookie = {
+      ...cookie,
+      ...(normalizedDomain ? { domain: normalizedDomain } : {}),
+      path: normalizedPath,
+    };
+
+    const key = `${normalizedDomain || ""}|${normalizedPath}|${cookie.name}`;
+    this.#cookies.set(key, normalized);
   }
 
   absorbSetCookie(value: string, url: URL): void {
@@ -82,7 +94,9 @@ export class CookieJar {
       if (cookie.expires && cookie.expires <= now) continue;
       if (cookie.secure && url.protocol !== "https:") continue;
 
-      const domain = cookie.domain?.toLowerCase();
+      const domain = cookie.domain
+        ?.replace(/^\./, "")
+        .toLowerCase();
       const hostname = url.hostname.toLowerCase();
       if (
         domain &&

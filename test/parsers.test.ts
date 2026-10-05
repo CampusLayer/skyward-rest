@@ -212,3 +212,41 @@ test("parses the discovered schedule, test score, fee, and graduation grids", ()
     "grid_gradReqs_<n>",
   );
 });
+
+
+test("page diagnostics expose structure without page text or record values", async () => {
+  const {
+    summarizeSkywardPage,
+    assertParsedSkywardPage,
+  } = await import("../src/parsers/page-diagnostic.js");
+
+  const html = `
+    <html>
+      <body>
+        <div id="sf_ContentWrap">Student Name 99.4</div>
+        <form id="sf_navForm">
+          <input name="sessionid" value="secret-session">
+          <input name="encses" value="secret-token">
+        </form>
+        <table id="grid_todaysCurrentSchedule123"></table>
+      </body>
+    </html>
+  `;
+
+  const diagnostic = summarizeSkywardPage(html);
+  assert.deepEqual(diagnostic.gridIds, [
+    "grid_todaysCurrentSchedule<n>",
+  ]);
+  assert.equal(diagnostic.hasSessionInputs, true);
+  assert.equal(diagnostic.hasNavForm, true);
+
+  const serialized = JSON.stringify(diagnostic);
+  assert.doesNotMatch(serialized, /Student Name/);
+  assert.doesNotMatch(serialized, /99\.4/);
+  assert.doesNotMatch(serialized, /secret-session/);
+
+  assert.throws(
+    () => assertParsedSkywardPage("schedule", html, 0),
+    /did not contain the expected data grids/,
+  );
+});

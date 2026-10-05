@@ -84,7 +84,10 @@ test("modern Student web page requests use sessionid and encses", async () => {
     fetch: mockFetch,
   });
 
-  await client.getAcademicHistory();
+  await assert.rejects(
+    client.getAcademicHistory(),
+    /did not contain the expected data grids/,
+  );
 
   assert.equal(
     requestedUrl,
@@ -94,4 +97,38 @@ test("modern Student web page requests use sessionid and encses", async () => {
   assert.match(requestedBody, /encses=modern-encses/);
   assert.doesNotMatch(requestedBody, /legacy-dwd/);
   assert.doesNotMatch(requestedBody, /legacy-wfaacl/);
+});
+
+
+test("imported browser cookies with leading dot domains are sent to Skyward", async () => {
+  const { CookieJar } = await import("../src/cookies.js");
+
+  const jar = new CookieJar([
+    {
+      name: "skywardSession",
+      value: "secret",
+      domain: ".scps.k12.fl.us",
+      path: "/Student/web/",
+      secure: true,
+      httpOnly: true,
+    },
+  ]);
+
+  assert.equal(
+    jar.headerFor(
+      new URL(
+        "https://skyward.scps.k12.fl.us/Student/web/sfschedule001.w",
+      ),
+    ),
+    "skywardSession=secret",
+  );
+
+  assert.equal(
+    jar.headerFor(
+      new URL(
+        "https://skyward.scps.k12.fl.us/Teacher/web/sfschedule001.w",
+      ),
+    ),
+    "",
+  );
 });
