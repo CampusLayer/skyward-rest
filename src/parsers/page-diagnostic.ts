@@ -1,19 +1,11 @@
 import { load } from "cheerio";
 import { SkywardParseError } from "../errors.js";
+import type { SkywardSessionState } from "../types.js";
 import { parseSkywardGridObjects } from "./grid-objects.js";
-
-export type SkywardPageState =
-  | "authenticated_shell"
-  | "session_invalid"
-  | "login_required"
-  | "access_denied"
-  | "sso_required"
-  | "error_page"
-  | "unknown";
 
 export interface SkywardPageDiagnostic {
   htmlBytes: number;
-  pageState: SkywardPageState;
+  pageState: SkywardSessionState;
   gridIds: string[];
   gridObjectKeys: string[];
   hasSessionInputs: boolean;
@@ -41,7 +33,7 @@ function classifyPageState(args: {
   hasSessionInputs: boolean;
   hasNavForm: boolean;
   hasContentWrap: boolean;
-}): SkywardPageState {
+}): SkywardSessionState {
   if (
     args.hasSessionInputs ||
     args.hasNavForm ||
