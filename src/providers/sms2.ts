@@ -60,12 +60,28 @@ export class Sms2Provider implements SkywardProvider {
     };
   }
 
-  async getReportCard() {
-    const html = await this.#http.form("sfgradebook001.w", {
+  #pageSessionFields(): Record<string, string> {
+    if (/\/(?:Student|Teacher|Family|Employee)\/web\/$/i.test(
+      this.#http.target.serviceRoot.pathname,
+    )) {
+      return {
+        sessionid: this.#tokens.sessionId,
+        encses: this.#tokens.encses,
+      };
+    }
+
+    return {
       dwd: this.#tokens.dwd,
       wfaacl: this.#tokens.wfaacl,
       encses: this.#tokens.encses,
-    });
+    };
+  }
+
+  async getReportCard() {
+    const html = await this.#http.form(
+      "sfgradebook001.w",
+      this.#pageSessionFields(),
+    );
     return parseReportCard(html);
   }
 
@@ -86,11 +102,10 @@ export class Sms2Provider implements SkywardProvider {
   }
 
   async getAcademicHistory() {
-    const html = await this.#http.form("sfacademichistory001.w", {
-      dwd: this.#tokens.dwd,
-      wfaacl: this.#tokens.wfaacl,
-      encses: this.#tokens.encses,
-    });
+    const html = await this.#http.form(
+      "sfacademichistory001.w",
+      this.#pageSessionFields(),
+    );
     return parseAcademicHistory(html);
   }
 

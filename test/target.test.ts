@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  createSkywardClient,
   normalizeSkywardTarget,
   SkywardSession,
 } from "../src/index.js";
@@ -36,4 +37,61 @@ test("SkywardSession export is explicit", () => {
   assert.equal(session.summary().role, "teacher");
   assert.doesNotMatch(JSON.stringify(session), /secretValue/);
   assert.equal(session.export().cookies?.[0]?.value, "secretValue");
+});
+
+
+test("normalizes a modern SMS Student web URL", () => {
+  const target = normalizeSkywardTarget(
+    "https://skyward.example.test/Student/web/sfhome01.w",
+  );
+
+  assert.equal(target.generation, "sms2");
+  assert.equal(
+    target.serviceRoot.toString(),
+    "https://skyward.example.test/Student/web/",
+  );
+});
+
+
+test("modern Student web page requests use sessionid and encses", async () => {
+  let requestedUrl = "";
+  let requestedBody = "";
+
+  const mockFetch: typeof fetch = async (input, init) => {
+    requestedUrl = String(input);
+    requestedBody = String(init?.body || "");
+    return new Response("<html></html>", {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html",
+      },
+    });
+  };
+
+  const client = createSkywardClient({
+    session: {
+      version: 1,
+      generation: "sms2",
+      baseUrl: "https://skyward.example.test/Student/web/",
+      role: "student",
+      sms2: {
+        dwd: "legacy-dwd",
+        wfaacl: "legacy-wfaacl",
+        encses: "modern-encses",
+        sessionId: "modern-session",
+      },
+    },
+    fetch: mockFetch,
+  });
+
+  await client.getAcademicHistory();
+
+  assert.equal(
+    requestedUrl,
+    "https://skyward.example.test/Student/web/sfacademichistory001.w",
+  );
+  assert.match(requestedBody, /sessionid=modern-session/);
+  assert.match(requestedBody, /encses=modern-encses/);
+  assert.doesNotMatch(requestedBody, /legacy-dwd/);
+  assert.doesNotMatch(requestedBody, /legacy-wfaacl/);
 });
