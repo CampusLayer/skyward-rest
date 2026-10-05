@@ -25,7 +25,8 @@ function text(html: string | undefined): string {
 
 function isYearHeader(row: GridRow): boolean {
   const first = row.c?.[0]?.h;
-  const value = load(first || "", null, false).find("div").first().text();
+  const $ = load(first || "", null, false);
+  const value = $("div").first().text();
   return /(\d{4})\D+(\d{4})\D+(\d{1,2})/.test(value);
 }
 
