@@ -3,6 +3,13 @@ import { SkywardHttpClient, type SkywardFetch } from "../http.js";
 import { parseAcademicHistory } from "../parsers/history.js";
 import { parseGradebook } from "../parsers/gradebook.js";
 import { parseReportCard } from "../parsers/report-card.js";
+import {
+  parseAttendanceTables,
+  parseFeeTables,
+  parseGraduationRequirementTables,
+  parseScheduleTables,
+  parseTestScoreTables,
+} from "../parsers/student-pages.js";
 import { SkywardSession } from "../session.js";
 import { normalizeSkywardTarget } from "../target.js";
 import type {
@@ -20,6 +27,11 @@ const STUDENT_CAPABILITIES = new Set<SkywardCapability>([
   "student.report_card.read",
   "student.gradebook.read",
   "student.history.read",
+  "student.schedule.read",
+  "student.attendance.read",
+  "student.test_scores.read",
+  "student.fees.read",
+  "student.graduation_requirements.read",
 ]);
 
 export interface Sms2ProviderOptions {
@@ -107,6 +119,45 @@ export class Sms2Provider implements SkywardProvider {
       this.#pageSessionFields(),
     );
     return parseAcademicHistory(html);
+  }
+
+  async #studentPage(
+    path: string,
+  ): Promise<string> {
+    return this.#http.form(
+      path,
+      this.#pageSessionFields(),
+    );
+  }
+
+  async getAttendance() {
+    return parseAttendanceTables(
+      await this.#studentPage("sfattendance001.w"),
+    );
+  }
+
+  async getSchedule() {
+    return parseScheduleTables(
+      await this.#studentPage("sfschedule001.w"),
+    );
+  }
+
+  async getTestScores() {
+    return parseTestScoreTables(
+      await this.#studentPage("sftestscores001.w"),
+    );
+  }
+
+  async getFees() {
+    return parseFeeTables(
+      await this.#studentPage("sffeemanagement001.w"),
+    );
+  }
+
+  async getGraduationRequirements() {
+    return parseGraduationRequirementTables(
+      await this.#studentPage("sfgradreqs001.w"),
+    );
   }
 
   exportSession(): SkywardSessionExport {
