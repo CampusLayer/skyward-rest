@@ -20,7 +20,7 @@ export class SkywardSessionError extends SkywardError {}
 export class SkywardHttpError extends SkywardError {
   readonly status: number;
   readonly url: string;
-  readonly body?: string;
+  readonly body: string | undefined;
 
   constructor(args: {
     message: string;
