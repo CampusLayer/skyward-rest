@@ -3,6 +3,7 @@ import type {
   Gradebook,
   ReportCourse,
   SkywardProviderCapabilities,
+  SkywardSessionHealth,
   SkywardTable,
   SkywardSessionExport,
 } from "../types.js";
@@ -15,6 +16,7 @@ export interface GradebookRequest {
 export interface SkywardProvider {
   readonly info: SkywardProviderCapabilities;
 
+  checkSession(): Promise<SkywardSessionHealth>;
   getReportCard(): Promise<ReportCourse[]>;
   getGradebook(request: GradebookRequest): Promise<Gradebook>;
   getAcademicHistory(): Promise<AcademicHistoryYear[]>;
