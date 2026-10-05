@@ -2,8 +2,18 @@ import { load } from "cheerio";
 import { SkywardParseError } from "../errors.js";
 import { parseSkywardGridObjects } from "./grid-objects.js";
 
+export type SkywardPageState =
+  | "authenticated_shell"
+  | "session_invalid"
+  | "login_required"
+  | "access_denied"
+  | "sso_required"
+  | "error_page"
+  | "unknown";
+
 export interface SkywardPageDiagnostic {
   htmlBytes: number;
+  pageState: SkywardPageState;
   gridIds: string[];
   gridObjectKeys: string[];
   hasSessionInputs: boolean;
@@ -23,6 +33,69 @@ function normalizeStructuralId(value: string): string {
 function safeGridId(value: string): string | null {
   if (!/^grid_[A-Za-z0-9_-]+$/i.test(value)) return null;
   return normalizeStructuralId(value);
+}
+
+function classifyPageState(args: {
+  html: string;
+  bodyText: string;
+  hasSessionInputs: boolean;
+  hasNavForm: boolean;
+  hasContentWrap: boolean;
+}): SkywardPageState {
+  if (
+    args.hasSessionInputs ||
+    args.hasNavForm ||
+    args.hasContentWrap
+  ) {
+    return "authenticated_shell";
+  }
+
+  const text = args.bodyText
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  if (
+    /session.{0,50}(expired|invalid|timed?\s*out)|(?:expired|invalid).{0,50}session|session timeout/.test(
+      text,
+    )
+  ) {
+    return "session_invalid";
+  }
+
+  if (
+    /access denied|not authori[sz]ed|permission denied|insufficient permission/.test(
+      text,
+    )
+  ) {
+    return "access_denied";
+  }
+
+  if (
+    /single sign.?on|\bsso\b|microsoftonline|\/skysts\/sso\//i.test(
+      text + " " + args.html,
+    )
+  ) {
+    return "sso_required";
+  }
+
+  if (
+    /please (?:log|sign) in|(?:log|sign) in (?:again|to continue)|login required|authentication required/.test(
+      text,
+    )
+  ) {
+    return "login_required";
+  }
+
+  if (
+    /an error occurred|unexpected error|unable to process|cannot process|something went wrong/.test(
+      text,
+    )
+  ) {
+    return "error_page";
+  }
+
+  return "unknown";
 }
 
 export function summarizeSkywardPage(
@@ -60,12 +133,24 @@ export function summarizeSkywardPage(
       .filter(Boolean),
   );
 
+  const hasSessionInputs =
+    inputNames.has("sessionid") && inputNames.has("encses");
+  const hasNavForm = $("#sf_navForm").length > 0;
+  const hasContentWrap = $("#sf_ContentWrap").length > 0;
+  const bodyText = $("body").text();
+
   return {
     htmlBytes: Buffer.byteLength(html, "utf8"),
+    pageState: classifyPageState({
+      html,
+      bodyText,
+      hasSessionInputs,
+      hasNavForm,
+      hasContentWrap,
+    }),
     gridIds,
     gridObjectKeys,
-    hasSessionInputs:
-      inputNames.has("sessionid") && inputNames.has("encses"),
+    hasSessionInputs,
     hasPasswordInput:
       $('input[type="password"]').length > 0 ||
       inputNames.has("password"),
@@ -73,8 +158,8 @@ export function summarizeSkywardPage(
       inputNames.has("login") ||
       inputNames.has("username") ||
       inputNames.has("userid"),
-    hasNavForm: $("#sf_navForm").length > 0,
-    hasContentWrap: $("#sf_ContentWrap").length > 0,
+    hasNavForm,
+    hasContentWrap,
   };
 }
 
