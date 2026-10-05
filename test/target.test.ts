@@ -37,3 +37,16 @@ test("SkywardSession export is explicit", () => {
   assert.doesNotMatch(JSON.stringify(session), /secretValue/);
   assert.equal(session.export().cookies?.[0]?.value, "secretValue");
 });
+
+
+test("normalizes a modern SMS Student web URL", () => {
+  const target = normalizeSkywardTarget(
+    "https://skyward.example.test/Student/web/sfhome01.w",
+  );
+
+  assert.equal(target.generation, "sms2");
+  assert.equal(
+    target.serviceRoot.toString(),
+    "https://skyward.example.test/Student/web/",
+  );
+});
