@@ -84,7 +84,10 @@ test("modern Student web page requests use sessionid and encses", async () => {
     fetch: mockFetch,
   });
 
-  await client.getAcademicHistory();
+  await assert.rejects(
+    client.getAcademicHistory(),
+    /did not contain the expected data grids/,
+  );
 
   assert.equal(
     requestedUrl,
