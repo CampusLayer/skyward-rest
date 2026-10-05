@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   SkywardSession,
   SkywardSsoRequiredError,
-  loginSms2WithPassword,
+  loginWithPassword,
   parseSms2LoginResponse,
 } from "../src/index.js";
 
@@ -44,7 +44,7 @@ test("native login URL encodes credentials and session JSON stays redacted", asy
     );
   };
 
-  const client = await loginSms2WithPassword({
+  const client = await loginWithPassword({
     loginUrl:
       "https://skyward.example.test/scripts/wsisa.dll/WService=wsEAplus/seplog01.w",
     username: "student+test",
