@@ -3,7 +3,10 @@ import { SkywardHttpClient, type SkywardFetch } from "../http.js";
 import { parseAcademicHistory } from "../parsers/history.js";
 import { parseGradebook } from "../parsers/gradebook.js";
 import { parseReportCard } from "../parsers/report-card.js";
-import { assertParsedSkywardPage } from "../parsers/page-diagnostic.js";
+import {
+  assertParsedSkywardPage,
+  summarizeSkywardPage,
+} from "../parsers/page-diagnostic.js";
 import {
   parseAttendanceTables,
   parseFeeTables,
@@ -17,6 +20,7 @@ import type {
   SkywardCapability,
   SkywardProviderCapabilities,
   SkywardSessionExport,
+  SkywardSessionHealth,
   Sms2SessionTokens,
 } from "../types.js";
 import type {
@@ -87,6 +91,17 @@ export class Sms2Provider implements SkywardProvider {
       dwd: this.#tokens.dwd,
       wfaacl: this.#tokens.wfaacl,
       encses: this.#tokens.encses,
+    };
+  }
+
+  async checkSession(): Promise<SkywardSessionHealth> {
+    const html = await this.#studentPage("sfhome01.w");
+    const diagnostic = summarizeSkywardPage(html);
+
+    return {
+      valid: diagnostic.pageState === "authenticated_shell",
+      state: diagnostic.pageState,
+      htmlBytes: diagnostic.htmlBytes,
     };
   }
 
