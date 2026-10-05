@@ -76,6 +76,26 @@ export class SkywardClient {
   getAcademicHistory() {
     return this.#provider.getAcademicHistory();
   }
+
+  getAttendance() {
+    return this.#provider.getAttendance();
+  }
+
+  getSchedule() {
+    return this.#provider.getSchedule();
+  }
+
+  getTestScores() {
+    return this.#provider.getTestScores();
+  }
+
+  getFees() {
+    return this.#provider.getFees();
+  }
+
+  getGraduationRequirements() {
+    return this.#provider.getGraduationRequirements();
+  }
 }
 
 export function createSkywardClient(
