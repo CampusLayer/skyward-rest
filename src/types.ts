@@ -61,6 +61,21 @@ export interface SkywardSessionSummary {
   metadataKeys: string[];
 }
 
+export type SkywardSessionState =
+  | "authenticated_shell"
+  | "session_invalid"
+  | "login_required"
+  | "access_denied"
+  | "sso_required"
+  | "error_page"
+  | "unknown";
+
+export interface SkywardSessionHealth {
+  valid: boolean;
+  state: SkywardSessionState;
+  htmlBytes: number;
+}
+
 export interface ReportScore {
   bucket: string;
   score: number | null;
