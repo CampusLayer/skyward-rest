@@ -85,7 +85,10 @@ export function parseSkywardGridObjects(
     const marker = script.indexOf("sf_gridObjects");
     if (marker < 0) continue;
 
-    const literal = findObjectLiteral(script, marker);
+    const payloadStart = script.indexOf("),", marker);
+    if (payloadStart < 0) continue;
+
+    const literal = findObjectLiteral(script, payloadStart + 2);
     try {
       const parsed = JSON5.parse(literal) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
