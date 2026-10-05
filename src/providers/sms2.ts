@@ -3,6 +3,7 @@ import { SkywardHttpClient, type SkywardFetch } from "../http.js";
 import { parseAcademicHistory } from "../parsers/history.js";
 import { parseGradebook } from "../parsers/gradebook.js";
 import { parseReportCard } from "../parsers/report-card.js";
+import { assertParsedSkywardPage } from "../parsers/page-diagnostic.js";
 import {
   parseAttendanceTables,
   parseFeeTables,
@@ -94,7 +95,9 @@ export class Sms2Provider implements SkywardProvider {
       "sfgradebook001.w",
       this.#pageSessionFields(),
     );
-    return parseReportCard(html);
+    const parsed = parseReportCard(html);
+    assertParsedSkywardPage("report card", html, parsed.length);
+    return parsed;
   }
 
   async getGradebook(request: GradebookRequest) {
@@ -118,7 +121,9 @@ export class Sms2Provider implements SkywardProvider {
       "sfacademichistory001.w",
       this.#pageSessionFields(),
     );
-    return parseAcademicHistory(html);
+    const parsed = parseAcademicHistory(html);
+    assertParsedSkywardPage("academic history", html, parsed.length);
+    return parsed;
   }
 
   async #studentPage(
@@ -131,33 +136,42 @@ export class Sms2Provider implements SkywardProvider {
   }
 
   async getAttendance() {
-    return parseAttendanceTables(
-      await this.#studentPage("sfattendance001.w"),
-    );
+    const html = await this.#studentPage("sfattendance001.w");
+    const parsed = parseAttendanceTables(html);
+    assertParsedSkywardPage("attendance", html, parsed.length);
+    return parsed;
   }
 
   async getSchedule() {
-    return parseScheduleTables(
-      await this.#studentPage("sfschedule001.w"),
-    );
+    const html = await this.#studentPage("sfschedule001.w");
+    const parsed = parseScheduleTables(html);
+    assertParsedSkywardPage("schedule", html, parsed.length);
+    return parsed;
   }
 
   async getTestScores() {
-    return parseTestScoreTables(
-      await this.#studentPage("sftestscores001.w"),
-    );
+    const html = await this.#studentPage("sftestscores001.w");
+    const parsed = parseTestScoreTables(html);
+    assertParsedSkywardPage("test scores", html, parsed.length);
+    return parsed;
   }
 
   async getFees() {
-    return parseFeeTables(
-      await this.#studentPage("sffeemanagement001.w"),
-    );
+    const html = await this.#studentPage("sffeemanagement001.w");
+    const parsed = parseFeeTables(html);
+    assertParsedSkywardPage("fees", html, parsed.length);
+    return parsed;
   }
 
   async getGraduationRequirements() {
-    return parseGraduationRequirementTables(
-      await this.#studentPage("sfgradreqs001.w"),
+    const html = await this.#studentPage("sfgradreqs001.w");
+    const parsed = parseGraduationRequirementTables(html);
+    assertParsedSkywardPage(
+      "graduation requirements",
+      html,
+      parsed.length,
     );
+    return parsed;
   }
 
   exportSession(): SkywardSessionExport {
