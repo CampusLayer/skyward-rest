@@ -12,7 +12,7 @@
 
 ## What changed in v2
 
-Version 2 is a ground-up TypeScript rewrite of the original 2019 `skyward-rest` project.
+Version 2 is a ground-up TypeScript rewrite of the original 2019 `[skyward-rest](https://github.com/Kaelinator/skyward-rest)` project.
 
 The old implementation assumed one SMS 2.0 username and password flow and mixed authentication, scraping, parsing, and application logic together.
 
