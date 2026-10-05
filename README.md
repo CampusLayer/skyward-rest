@@ -1,232 +1,245 @@
-# Skyward REST
+<div align="center">
 
-[![Build Status](https://travis-ci.org/Kaelinator/skyward-rest.svg?branch=master)](https://travis-ci.org/Kaelinator/skyward-rest)
+# skyward-rest
 
-## Summary
+**A modern TypeScript client library for self-hosted Skyward integrations.**
 
-**Unofficial Rest API for Skyward**
- - Queries data for the fastest output
- - Breaks down and parses complex responses
- - Handles edge cases with ease
- - Built functionally
+[![CI](https://github.com/caleb-mau/skyward-rest/actions/workflows/ci.yml/badge.svg)](https://github.com/caleb-mau/skyward-rest/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js 20+](https://img.shields.io/badge/node.js-20%2B-339933?logo=node.js&logoColor=white)](package.json)
 
-## Examples
+</div>
 
-**Boilerplate**
+## What changed in v2
 
-```javascript
-const skyward = require('skyward-rest')
+Version 2 is a ground-up TypeScript rewrite of the original 2019 `skyward-rest` project.
 
-const url = 'https://skyward.cooldistrict.net/...'
+The old implementation assumed one SMS 2.0 username and password flow and mixed authentication, scraping, parsing, and application logic together.
 
-const scraper = skyward(url) // the scraper!
+v2 separates those concerns:
+
+```text
+Authentication / session
+        ↓
+same-origin Skyward transport
+        ↓
+provider adapter
+        ↓
+typed Skyward data
 ```
 
-**Scrape a user's course gradebook**
+That matters because modern districts may use native Skyward login, Microsoft or Google SSO, ClassLink, Clever, MFA, or other identity systems.
 
-```javascript
-scraper.scrapeGradebook(user, pass, options)
-  .then(console.log) // => Large Object
+**skyward-rest does not need to own the identity provider flow.**
+
+A consuming application can authenticate through the district's normal browser flow, then hand the resulting Skyward session state to this library.
+
+That is the intended architecture for projects such as `skyward-mcp`.
+
+## Current support
+
+The first v2 adapter targets **Skyward SMS 2.0 compatibility** based on the behavior documented by the original project.
+
+Current typed operations include:
+
+* Report card grades
+* Detailed course gradebook
+* Academic history
+* Native SMS 2.0 password login where the district still permits it
+* Explicit session import and export
+* Same-origin authenticated HTTP transport
+* Role and capability metadata for future student, teacher, parent, and staff adapters
+
+Qmlativ and broader teacher workflows are intentionally modeled as provider extensions rather than being faked as already supported.
+
+## Install
+
+```bash
+npm install skyward-rest
 ```
 
-**Scrape a user's academic history**
+Node.js 20 or newer is required.
 
-```javascript
-scraper.scrapeHistory(user, pass)
-  .then(console.log) // => Array of Sizeable Objects
+## Native SMS 2.0 login
+
+For districts that still expose the compatible Skyward login flow:
+
+```ts
+import { loginWithPassword } from "skyward-rest";
+
+const skyward = await loginWithPassword({
+  loginUrl:
+    "https://skyward.example.net/scripts/wsisa.dll/WService=wsEAplus/seplog01.w",
+  username: process.env.SKYWARD_USERNAME!,
+  password: process.env.SKYWARD_PASSWORD!,
+});
+
+const reportCard = await skyward.getReportCard();
 ```
 
-## API
+The password is used only for the authentication request. It is not retained by the client.
 
-- [skyward( loginURL )](#skyward-loginurl-)
-- [.scrapeReport( user, pass )](#scrapereport-user-pass-)
-  - [Report](#report)
-- [.scrapeGradebook( user, pass, options )](#scrapegradebook-user-pass-options-)
-  - [Gradebook](#gradebook)
-- [.scrapeHistory( user, pass )](#scrapehistory-user-pass-)
-  - [SchoolYear](#schoolyear)
+If the deployment appears to require SSO, the login helper throws `SkywardSsoRequiredError` instead of attempting to bypass the district login flow.
 
-### skyward( loginURL )
+## Browser SSO and session injection
 
-Function which returns an object containing the API.
+SSO orchestration belongs in the consuming application.
 
-* **loginURL** _string_ - URL to the login page of the specific district's Skyward domain. Note that the URL should not redirect.
+For example, `skyward-mcp` can open the district's real login page in a browser, let the user complete Microsoft, Google, ClassLink, Clever, MFA, or another normal SSO flow, then import the resulting Skyward session:
 
-```javascript
-const skyward = require('skyward-rest')
+```ts
+import {
+  createSkywardClient,
+  SkywardSession,
+} from "skyward-rest";
 
-skyward('https://skyward.cooldistrict.net/scripts/wsisa.dll/WService=wsEAplus/seplog01.w')
-// => { usable functions }
+const session = new SkywardSession({
+  version: 1,
+  generation: "sms2",
+  baseUrl:
+    "https://skyward.example.net/scripts/wsisa.dll/WService=wsEAplus/",
+  role: "teacher",
+  cookies: browserCookies,
+  sms2: extractedSkywardSessionTokens,
+});
+
+const skyward = createSkywardClient({ session });
 ```
 
-### .scrapeReport( user, pass )
+The important boundary is:
 
-Fetches and parses a student's report card, returning a promise which results in an object that's `data` property is an array of [`Report`](#report)s. Note that this differs from `.scrapeGradebook` in that individual assignments in a course are not scraped, only the bucket's score.
+```text
+Identity provider credentials
+        stay in the browser
 
-* **user** _string_ - the username or Login ID of the student who's grades will be retrieved
-* **pass** _string_ - the password of the student
+Skyward session state
+        stays in the self-hosted application
 
-```javascript
-scraper.scrapeReport(user, pass)
-  .then(({ data, raw }) => {
-    console.log(data) // array of reports
-    console.log(raw) // fetched html before parsing
-  })
+Structured school data
+        is returned by skyward-rest
 ```
 
-#### Report
+This package does not ask for Google, Microsoft, ClassLink, Clever, or district identity provider passwords.
 
-An object that contains scores from a specific course over each bucket.
+## Session safety
 
-```javascript
-{
-  course: 97776, // the five-digit course ID
-  scores: [
-    {
-      bucket: 'TERM 1',
-      score: 100
-    },
-    {
-      bucket: 'TERM 2',
-      score: 98
-    },
-    /* etc */
-  ]
+`SkywardSession` intentionally does not serialize secrets through normal JSON output.
+
+```ts
+JSON.stringify(session);
+// only returns a redacted summary
+```
+
+Reading the actual cookies or session tokens requires an explicit call:
+
+```ts
+const exported = session.export();
+```
+
+That makes accidental logging less likely.
+
+## Gradebook
+
+```ts
+const gradebook = await skyward.getGradebook({
+  courseId: 97776,
+  bucket: "TERM 1",
+});
+
+console.log(gradebook.course);
+console.log(gradebook.score);
+console.log(gradebook.gradebook);
+```
+
+## Academic history
+
+```ts
+const history = await skyward.getAcademicHistory();
+```
+
+## Report card
+
+```ts
+const report = await skyward.getReportCard();
+```
+
+## Security model
+
+Authenticated Skyward requests are restricted to the configured Skyward origin.
+
+A redirect to another origin is rejected before cookies or session state can be forwarded.
+
+The old project parsed Skyward JavaScript with `eval()`. v2 does not. Embedded grid objects are extracted as bounded object literals and parsed as data.
+
+See [SECURITY.md](SECURITY.md) for more.
+
+## Provider architecture
+
+The public provider boundary is designed for multiple Skyward generations and roles.
+
+```ts
+interface SkywardProvider {
+  getReportCard(): Promise<ReportCourse[]>;
+  getGradebook(request: GradebookRequest): Promise<Gradebook>;
+  getAcademicHistory(): Promise<AcademicHistoryYear[]>;
+  exportSession(): SkywardSessionExport;
 }
 ```
 
-### .scrapeGradebook( user, pass, options )
+Future adapters can add capabilities for:
 
-Fetches and parses user's a gradebook, returning a promise which results in an object that's data property is a [`Gradebook`](#gradebook).
+* Student schedules and attendance
+* Teacher classes and rosters
+* Teacher gradebooks
+* Parent access
+* Qmlativ
+* Official district API credentials where available
 
-* **user** _string_ - the username or Login ID of the student who's gradebook will be retrieved
-* **pass** _string_ - the password of the student
-* **options** _object_ - information identifying which gradebook to scrape
-  * **course** _number_ - the five-digit course ID to scrape _(e.g. 97776, 97674, etc. )_
-  * **bucket** _string_ - the term to scrape _(e.g. 'TERM 1', 'SEM 1', etc.)_
+The library does not assume every authenticated Skyward identity is a student.
 
-```javascript
-scraper.scrapeGradebook(user, pass, { course: 97776, bucket: 'TERM 3' })
-  .then(({ data, raw }) => {
-    console.log(data) // gradebook
-    console.log(raw) // fetched xml before parsing
-  })
+## Relationship to skyward-mcp
+
+`skyward-rest` is intentionally **not** an MCP server.
+
+The planned split is:
+
+```text
+skyward-rest
+  typed Skyward client
+  auth/session primitives
+  provider adapters
+  safe parsers
+
+skyward-mcp
+  ChatGPT / Claude MCP server
+  interactive browser SSO
+  role-aware tools
+  teacher privacy
+  write approvals
+  local and self-hosted setup
 ```
 
-#### Gradebook
+Keeping those layers separate makes the core library reusable without coupling it to one AI client or deployment model.
 
-An object that contains information and assignments about a course at a specific bucket.
+## Development
 
-```javascript
-{
-  course: 'PHYSICS 2 AP', // name of the course
-  instructor: 'Jennifer Smith', // name of the instructor
-  lit: { // information about the specific bucket
-    name: 'S1', // bucket's alias
-    begin: '08/20/2018', // bucket's begin date
-    end: '12/20/2018' // bucket's end date
-  },
-  period: 1, // course's order in the day
-  score: 99.5, // score recieved (usually contains a decimal)
-  grade: 100, // score after rounding (always a whole number)
-  gradeAdjustment: 1.5, // points added to average to get score (null if no adjustment)
-  breakdown: [ // buckets which make up this bucket's score (null if no breakdown)
-    {
-      lit: 'Q2', // bucket's alias
-      score: 95.5, // score recieved
-      grade: 96, // score after rounding
-      weight: 50, // part that this bucket's score makes up the parent bucket's score (out of 100)
-    },
-    {
-      lit: 'Q1',
-      grade: 100,
-      score: 100,
-      weight: 50,
-    },
-  ],
-  gradebook: [ // grade categories which make up this bucket's score
-    {
-      category: 'Major', // category title
-      breakdown: [ // buckets which make up this category (undefined if no breakdown)
-        {
-          lit: 'Q2', // bucket's alias
-          weight: 70, // part that this bucket's score makes up this category's score (out of 100)
-          dates: {
-            begin: '10/22/2018', // bucket's begin date
-            end: '12/20/2018', // bucket's end date
-          },
-          score: 96.5, // score recieved
-          grade: 97, // score after rounding
-          points: {
-            earned: 965, // sum of all assignments' earned points
-            total: 1000, // sum of all assignments' total points
-          },
-        },
-        /* etc. */
-      ],
-      assignments: [ // assignments which make up this category
-        {
-          title: 'TEST IV',
-          score: 100, // score recieved (null if no score)
-          grade: 100, // score after rounding (null if no grade)
-          points: {
-            earned: 100, // earned points (null if no earned)
-            total: 100, // total points (null if no total)
-          },
-          date: '09/07/18', // date the assignment is/was due
-          meta: [ // assignment modifiers
-            {
-              type: 'absent', // modifier type (e.g. 'absent', 'noCount', or 'missing')
-              note: 'Parent note received within 5d', // extra message
-            }
-          ],
-        },
-        /* etc. */
-      ]
-    },
-    /* etc. */
-  ]
-}
+```bash
+npm install
+npm test
+npm run typecheck
+npm run build
 ```
 
-### .scrapeHistory( user, pass )
+Use fictional or sanitized fixtures only.
 
-Fetches and parses user's a academic history, returning a promise which results in an object that's data property is an array of [`SchoolYear`](#schoolyear)s.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-* **user** _string_ - the username or Login ID of the student who's academic history will be retrieved
-* **pass** _string_ - the password of the student
+## Attribution
 
-```javascript
-scraper.scrapeHistory(user, pass)
-  .then(({ data, raw }) => {
-    console.log(data) // array of schoolYears
-    console.log(raw) // fetched xml before parsing
-  })
-```
+The original `skyward-rest` project was created by Kael Kirk / FruitsNVeggies and released under the MIT License.
 
-#### SchoolYear
+The repository history and original license are preserved. See [NOTICE.md](NOTICE.md).
 
-An object that contins information, courses, and scores from a completed school year
+## License
 
-```javascript
-{
-  dates: {
-    begin: '2018', // school year begin date
-    end: '2019', // school year end date
-  },
-  grade: 12, // grade of student during the school year
-  courses: [ // courses taken during the year
-    {
-      course: 'PHYSICS 2 AP', // course name
-      scores: [
-        {
-          grade: 100, // grade recieved
-          lit: 'S1', // bucket alias
-        },
-        /* etc. */
-      ]
-    },
-    /* etc. */
-  ]
-}
-```
+MIT. See [LICENSE](LICENSE).
