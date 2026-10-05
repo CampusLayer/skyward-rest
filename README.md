@@ -4,7 +4,7 @@
 
 **A modern TypeScript client library for self-hosted Skyward integrations.**
 
-[![CI](https://github.com/caleb-mau/skyward-rest/actions/workflows/ci.yml/badge.svg)](https://github.com/caleb-mau/skyward-rest/actions/workflows/ci.yml)
+[![CI](https://github.com/caleb-media-studio/skyward-rest/actions/workflows/ci.yml/badge.svg)](https://github.com/caleb-media-studio/skyward-rest/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js 20+](https://img.shields.io/badge/node.js-20%2B-339933?logo=node.js&logoColor=white)](package.json)
 
