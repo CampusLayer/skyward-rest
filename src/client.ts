@@ -65,6 +65,10 @@ export class SkywardClient {
     return this.#provider.exportSession();
   }
 
+  checkSession() {
+    return this.#provider.checkSession();
+  }
+
   getReportCard() {
     return this.#provider.getReportCard();
   }
