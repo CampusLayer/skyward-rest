@@ -40,6 +40,14 @@ export {
 export {
   parseSkywardGridObjects,
 } from "./parsers/grid-objects.js";
+export {
+  parseAttendanceTables,
+  parseFeeTables,
+  parseGraduationRequirementTables,
+  parseScheduleTables,
+  parseSelectedTables,
+  parseTestScoreTables,
+} from "./parsers/student-pages.js";
 
 export type {
   GradebookRequest,
