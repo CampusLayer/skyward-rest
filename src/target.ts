@@ -35,6 +35,19 @@ export function normalizeSkywardTarget(input: string): SkywardTarget {
     };
   }
 
+  const modernWebMatch = url.pathname.match(
+    /^(.*\/(?:Student|Teacher|Family|Employee)\/web\/)(?:[^/]*)?$/i,
+  );
+
+  if (modernWebMatch?.[1]) {
+    return {
+      inputUrl: url,
+      origin: url.origin,
+      serviceRoot: new URL(modernWebMatch[1], url.origin),
+      generation: "sms2",
+    };
+  }
+
   return {
     inputUrl: url,
     origin: url.origin,
