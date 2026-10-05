@@ -165,7 +165,7 @@ test("session health reports authenticated and invalid SMS sessions without expo
   assert.deepEqual(healthy, {
     valid: true,
     state: "authenticated_shell",
-    htmlBytes: 139,
+    htmlBytes: 131,
   });
 
   const expired = await makeClient(
