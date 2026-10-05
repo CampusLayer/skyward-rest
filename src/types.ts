@@ -14,6 +14,9 @@ export type SkywardCapability =
   | "student.history.read"
   | "student.schedule.read"
   | "student.attendance.read"
+  | "student.test_scores.read"
+  | "student.fees.read"
+  | "student.graduation_requirements.read"
   | "teacher.classes.read"
   | "teacher.rosters.read"
   | "teacher.gradebook.read"
@@ -148,6 +151,13 @@ export interface AcademicHistoryYear {
   };
   grade: number | null;
   courses: AcademicHistoryCourse[];
+}
+
+
+export interface SkywardTable {
+  id: string;
+  headers: string[];
+  rows: string[][];
 }
 
 export interface SkywardProviderCapabilities {
